@@ -1,0 +1,52 @@
+/* Estilos personalizados para o Sistema de Molduras */
+
+/* Scrollbar moderno */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* Canvas de preview interativo */
+#previewCanvas {
+    image-rendering: auto;
+    touch-action: none;
+    max-height: 520px;
+    background-color: #0b0f19;
+}
+
+/* Botões de aba */
+.tab-btn {
+    transition: all 0.2s ease;
+}
+
+/* Transições de drag & drop */
+.drag-over {
+    border-color: #38bdf8 !important;
+    background-color: rgba(56, 189, 248, 0.08) !important;
+}
+
+/* Card de miniatura no lote */
+.batch-item-card {
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.batch-item-card:hover {
+    transform: translateY(-2px);
+    border-color: #38bdf8;
+}
+
+/* Animação suave para toast */
+.toast-visible {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}

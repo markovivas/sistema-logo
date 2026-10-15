@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enquadrador de Fotos & Molduras Automáticas</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white">
+
+    <!-- Header Principal -->
+    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center">
+                <img src="/static/img/logo.png" alt="Logo" class="h-[40px] w-auto object-contain" style="height: 40px;">
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Status das Molduras -->
+                <div class="hidden sm:flex items-center gap-2 text-xs bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5">
+                    <span class="flex items-center gap-1.5 text-slate-300">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        V: <strong class="text-white">1080×1350</strong>
+                    </span>
+                    <span class="text-slate-600">|</span>
+                    <span class="flex items-center gap-1.5 text-slate-300">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        H: <strong class="text-white">6240×4160</strong>
+                    </span>
+                </div>
+
+                <!-- Botão Abrir Pasta no Windows -->
+                <button id="btnOpenFolder" class="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+                    <i data-lucide="folder-open" class="w-4 h-4 text-amber-400"></i>
+                    <span>Abrir Pasta de Saída</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Barra de Abas (Modo Individual vs Modo em Lote) -->
+    <div class="border-b border-slate-800 bg-slate-950/40">
+        <div class="max-w-7xl mx-auto px-6 flex gap-4">
+            <button id="tabBtnIndividual" class="tab-btn active flex items-center gap-2 py-3.5 px-4 font-semibold text-sm border-b-2 border-sky-500 text-sky-400 transition">
+                <i data-lucide="crop" class="w-4 h-4"></i>
+                Modo Individual & Ajuste Fino
+            </button>
+            <button id="tabBtnBatch" class="tab-btn flex items-center gap-2 py-3.5 px-4 font-semibold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
+                <i data-lucide="layers" class="w-4 h-4"></i>
+                Modo Em Lote (Múltiplas Fotos)
+                <span id="batchCountBadge" class="hidden text-xs bg-sky-500 text-white rounded-full px-2 py-0.2">0</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+
+        <!-- ================= MODO INDIVIDUAL ================= -->
+        <section id="sectionIndividual" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Coluna da Esquerda: Pré-visualização & Canvas (7 colunas) -->
+            <div class="lg:col-span-7 flex flex-col gap-4">
+                
+                <!-- Card do Visualizador Interativo -->
+                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[520px] relative overflow-hidden shadow-2xl">
+                    
+                    <!-- Estado Inicial: Upload Dropzone -->
+                    <div id="dropzoneIndividual" class="w-full h-full flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-700 hover:border-sky-500 rounded-xl cursor-pointer transition group bg-slate-900/50 hover:bg-slate-900/80">
+                        <input type="file" id="fileInputIndividual" class="hidden" accept="image/*">
+                        <div class="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center group-hover:scale-110 transition duration-300">
+                            <i data-lucide="upload-cloud" class="w-8 h-8 text-sky-400"></i>
+                        </div>
+                        <h3 class="mt-4 font-semibold text-slate-200 group-hover:text-sky-300 text-base">Arraste uma foto aqui ou clique para selecionar</h3>
+                        <p class="text-xs text-slate-400 mt-1">Suporta JPG, PNG, WEBP e formatos de câmeras digitais</p>
+                        <span class="mt-4 inline-flex items-center gap-1.5 text-xs text-sky-400 font-medium bg-sky-950/50 border border-sky-800/60 px-3 py-1 rounded-full">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Detecção de orientação automática
+                        </span>
+                    </div>
+
+                    <!-- Editor Interativo Ativo (Oculto até carregar foto) -->
+                    <div id="editorContainer" class="hidden w-full h-full flex flex-col items-center justify-center relative">
+                        
+                        <!-- Toolbar de Visualização -->
+                        <div class="w-full flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3 text-xs">
+                            <div class="flex items-center gap-2">
+                                <span id="photoNameBadge" class="font-medium text-slate-300 truncate max-w-[200px]">foto.jpg</span>
+                                <span id="photoDimBadge" class="text-slate-400 text-[11px]">(3000×2000)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button id="btnTrocarFoto" class="text-slate-400 hover:text-slate-200 text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-800 transition">
+                                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Trocar Foto
+                                </button>
+                                <button id="btnResetarAjustes" class="text-slate-400 hover:text-slate-200 text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-800 transition">
+                                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Resetar Posição
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Canvas Interativo -->
+                        <div class="relative w-full flex items-center justify-center flex-1 overflow-hidden rounded-xl bg-slate-900 border border-slate-800 select-none" id="canvasWrapper" style="max-height: 580px;">
+                            <canvas id="previewCanvas" class="max-w-full max-h-full object-contain cursor-grab active:cursor-grabbing shadow-2xl rounded"></canvas>
+                            
+                            <!-- Dica de Arrastar Flutuante -->
+                            <div id="dragTip" class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur border border-slate-700/80 text-slate-300 text-[11px] px-3 py-1 rounded-full pointer-events-none flex items-center gap-1.5 shadow">
+                                <i data-lucide="move" class="w-3 h-3 text-sky-400"></i>
+                                Arraste para reposicionar a foto • Use a roda do mouse para zoom
+                            </div>
+                        </div>
+
+                        <!-- Info da Moldura Final -->
+                        <div class="w-full flex items-center justify-between mt-3 text-xs text-slate-400 pt-2 border-t border-slate-800/60">
+                            <span class="flex items-center gap-1.5">
+                                Moldura Aplicada: <strong id="activeFrameBadge" class="text-sky-400 font-semibold">Vertical (1080×1350)</strong>
+                            </span>
+                            <span class="text-slate-500 text-[11px]">Renderização com qualidade máxima na exportação</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Coluna da Direita: Controles & Redimensionamento (5 colunas) -->
+            <div class="lg:col-span-5 flex flex-col gap-5">
+                
+                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col gap-5">
+                    
+                    <div>
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <i data-lucide="sliders" class="w-4 h-4 text-sky-400"></i>
+                            Controles de Enquadramento
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Ajuste como a foto se posiciona dentro do quadro</p>
+                    </div>
+
+                    <!-- 1. Seleção de Moldura -->
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Moldura / Orientação</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button type="button" data-frame="auto" class="frame-toggle-btn active p-2.5 rounded-xl border border-sky-500 bg-sky-500/10 text-sky-300 text-xs font-medium flex flex-col items-center gap-1 transition">
+                                <i data-lucide="wand-2" class="w-4 h-4 text-sky-400"></i>
+                                <span>Automático</span>
+                            </button>
+                            <button type="button" data-frame="vertical" class="frame-toggle-btn p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 text-xs font-medium flex flex-col items-center gap-1 transition">
+                                <i data-lucide="smartphone" class="w-4 h-4 text-slate-400"></i>
+                                <span>Vertical</span>
+                            </button>
+                            <button type="button" data-frame="horizontal" class="frame-toggle-btn p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 text-xs font-medium flex flex-col items-center gap-1 transition">
+                                <i data-lucide="monitor" class="w-4 h-4 text-slate-400"></i>
+                                <span>Horizontal</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Modo de Redimensionamento no Quadro -->
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Modo de Redimensionamento</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" data-fit="cover" class="fit-toggle-btn active p-3 rounded-xl border border-sky-500 bg-sky-500/10 text-sky-300 text-xs font-medium flex items-center gap-2.5 transition">
+                                <i data-lucide="maximize" class="w-4 h-4 text-sky-400"></i>
+                                <div class="text-left">
+                                    <div class="font-bold">Preencher Quadro</div>
+                                    <div class="text-[10px] text-slate-400 leading-tight">Cobre 100% sem sobras</div>
+                                </div>
+                            </button>
+                            <button type="button" data-fit="contain" class="fit-toggle-btn p-3 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 text-xs font-medium flex items-center gap-2.5 transition">
+                                <i data-lucide="minimize" class="w-4 h-4 text-slate-400"></i>
+                                <div class="text-left">
+                                    <div class="font-bold">Caber Inteiro</div>
+                                    <div class="text-[10px] text-slate-400 leading-tight">Foto 100% visível</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 3. Zoom Manual e Sliders de Posição -->
+                    <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 space-y-4">
+                        
+                        <!-- Zoom Slider -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-300 font-medium flex items-center gap-1.5">
+                                    <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-sky-400"></i> Zoom da Foto
+                                </span>
+                                <span id="zoomValueBadge" class="text-sky-400 font-mono font-bold">100%</span>
+                            </div>
+                            <input type="range" id="zoomSlider" min="0.3" max="3.0" step="0.05" value="1.0" class="w-full accent-sky-500 cursor-pointer">
+                        </div>
+
+                        <!-- Posição Horizontal (Offset X) -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-300 font-medium">Posição Horizontal (X)</span>
+                                <span id="offsetXBadge" class="text-slate-400 font-mono text-[11px]">0%</span>
+                            </div>
+                            <input type="range" id="offsetXSlider" min="-0.6" max="0.6" step="0.01" value="0.0" class="w-full accent-sky-500 cursor-pointer">
+                        </div>
+
+                        <!-- Posição Vertical (Offset Y) -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-300 font-medium">Posição Vertical (Y)</span>
+                                <span id="offsetYBadge" class="text-slate-400 font-mono text-[11px]">0%</span>
+                            </div>
+                            <input type="range" id="offsetYSlider" min="-0.6" max="0.6" step="0.01" value="0.0" class="w-full accent-sky-500 cursor-pointer">
+                        </div>
+                    </div>
+
+                    <!-- 4. Fundo do Quadro (quando a foto não cobrir tudo) -->
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Fundo do Quadro</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button type="button" data-bg="blur" class="bg-toggle-btn active p-2 rounded-lg border border-sky-500 bg-sky-500/10 text-sky-300 text-xs font-medium flex flex-col items-center gap-1 transition">
+                                <i data-lucide="sparkle" class="w-4 h-4 text-sky-400"></i>
+                                <span>Desfocado</span>
+                            </button>
+                            <button type="button" data-bg="white" class="bg-toggle-btn p-2 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 text-xs font-medium flex flex-col items-center gap-1 transition">
+                                <div class="w-4 h-4 rounded-full bg-white border border-slate-300"></div>
+                                <span>Branco</span>
+                            </button>
+                            <button type="button" data-bg="black" class="bg-toggle-btn p-2 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 text-xs font-medium flex flex-col items-center gap-1 transition">
+                                <div class="w-4 h-4 rounded-full bg-black border border-slate-700"></div>
+                                <span>Preto</span>
+                            </button>
+                            <div class="relative">
+                                <button type="button" data-bg="custom" id="btnCustomColor" class="bg-toggle-btn w-full h-full p-2 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 text-xs font-medium flex flex-col items-center gap-1 transition">
+                                    <div id="customColorCircle" class="w-4 h-4 rounded-full bg-slate-500 border border-slate-400"></div>
+                                    <span>Personalizado</span>
+                                </button>
+                                <input type="color" id="customColorPicker" value="#222222" class="opacity-0 absolute inset-0 cursor-pointer w-full h-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. Formato de Exportação -->
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+                        <span class="text-slate-400 font-medium">Formato da Foto:</span>
+                        <div class="flex items-center gap-3">
+                            <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                                <input type="radio" name="format" value="jpg" checked class="accent-sky-500">
+                                <span>JPG (95% Alta Qualidade)</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                                <input type="radio" name="format" value="png" class="accent-sky-500">
+                                <span>PNG</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-xs text-slate-300">
+                        <input type="checkbox" id="checkSaveToDisk" checked class="rounded accent-sky-500 cursor-pointer w-4 h-4">
+                        <label for="checkSaveToDisk" class="cursor-pointer">Salvar também cópia na pasta local <strong>fotos_processadas</strong></label>
+                    </div>
+
+                    <!-- Botão de Download / Salvar Foto Pronta -->
+                    <button id="btnDownloadSingle" class="w-full py-3.5 px-6 rounded-xl font-bold text-white bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2.5 transition active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-sm">
+                        <i data-lucide="download" class="w-5 h-5"></i>
+                        <span>Baixar Foto com Moldura (Alta Resolução)</span>
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ================= MODO EM LOTE ================= -->
+        <section id="sectionBatch" class="hidden flex flex-col gap-6">
+
+            <!-- Card Superior: Upload de Lote & Controles Globais -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Área de Dropzone de Lote (7 colunas) -->
+                <div class="lg:col-span-7 flex flex-col gap-4">
+                    <div id="dropzoneBatch" class="bg-slate-950 border-2 border-dashed border-slate-700 hover:border-sky-500 rounded-2xl p-8 flex flex-col items-center justify-center min-h-[260px] cursor-pointer transition group shadow-xl">
+                        <input type="file" id="fileInputBatch" multiple class="hidden" accept="image/*">
+                        <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center group-hover:scale-110 transition duration-300">
+                            <i data-lucide="folder-up" class="w-8 h-8 text-indigo-400"></i>
+                        </div>
+                        <h3 class="mt-4 font-semibold text-slate-200 group-hover:text-sky-300 text-base">Arraste várias fotos de uma vez ou clique para selecionar</h3>
+                        <p class="text-xs text-slate-400 mt-1">Selecione 10, 50 ou 100+ fotos simultâneas</p>
+                        <div class="mt-4 flex items-center gap-3 text-xs">
+                            <span class="inline-flex items-center gap-1 text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1 rounded-full">
+                                <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i> Orientação detectada por foto
+                            </span>
+                            <span class="inline-flex items-center gap-1 text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1 rounded-full">
+                                <i data-lucide="archive" class="w-3.5 h-3.5 text-sky-400"></i> Download em arquivo ZIP
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configurações Padrão do Lote (5 colunas) -->
+                <div class="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between gap-4">
+                    <div>
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <i data-lucide="settings" class="w-4 h-4 text-indigo-400"></i>
+                            Regras do Lote
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Defina como todas as fotos do lote serão enquadradas</p>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <!-- Modo de Ajuste Padrão -->
+                        <div>
+                            <label class="font-semibold text-slate-300 block mb-1.5">Redimensionamento padrão:</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" data-batch-fit="cover" class="batch-fit-btn active p-2.5 rounded-xl border border-indigo-500 bg-indigo-500/10 text-indigo-300 font-semibold flex items-center gap-2 transition">
+                                    <i data-lucide="maximize" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                    Preencher Quadro
+                                </button>
+                                <button type="button" data-batch-fit="contain" class="batch-fit-btn p-2.5 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 font-semibold flex items-center gap-2 transition">
+                                    <i data-lucide="minimize" class="w-3.5 h-3.5 text-slate-400"></i>
+                                    Caber Inteiro
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Fundo Padrão (se contain) -->
+                        <div>
+                            <label class="font-semibold text-slate-300 block mb-1.5">Fundo (se a foto não preencher):</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" data-batch-bg="blur" class="batch-bg-btn active p-2 rounded-lg border border-indigo-500 bg-indigo-500/10 text-indigo-300 font-medium text-center transition">
+                                    Desfocado
+                                </button>
+                                <button type="button" data-batch-bg="white" class="batch-bg-btn p-2 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center transition">
+                                    Branco
+                                </button>
+                                <button type="button" data-batch-bg="black" class="batch-bg-btn p-2 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center transition">
+                                    Preto
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Formato de Saída -->
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                            <span class="text-slate-400">Formato:</span>
+                            <div class="flex items-center gap-3">
+                                <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                                    <input type="radio" name="batchFormat" value="jpg" checked class="accent-indigo-500">
+                                    <span>JPG (Alta Qualidade)</span>
+                                </label>
+                                <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                                    <input type="radio" name="batchFormat" value="png" class="accent-indigo-500">
+                                    <span>PNG</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Opções de Saída -->
+                        <div class="space-y-1.5 pt-1">
+                            <label class="flex items-center gap-2 text-slate-300 cursor-pointer">
+                                <input type="checkbox" id="batchCheckZip" checked class="rounded accent-indigo-500 cursor-pointer w-4 h-4">
+                                <span>Baixar todas em arquivo <strong>.ZIP</strong></span>
+                            </label>
+                            <label class="flex items-center gap-2 text-slate-300 cursor-pointer">
+                                <input type="checkbox" id="batchCheckDisk" checked class="rounded accent-indigo-500 cursor-pointer w-4 h-4">
+                                <span>Salvar na pasta local <strong>fotos_processadas</strong></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Botão de Ação do Lote -->
+                    <button id="btnProcessBatch" disabled class="w-full py-3.5 px-6 rounded-xl font-bold text-white bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-500 hover:to-sky-500 shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2.5 transition active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+                        <i data-lucide="play" class="w-5 h-5"></i>
+                        <span id="batchBtnText">Selecione fotos para começar</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Barra de Progresso do Lote -->
+            <div id="batchProgressCard" class="hidden bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                <div class="flex items-center justify-between text-xs">
+                    <span id="batchStatusText" class="font-semibold text-slate-200 flex items-center gap-2">
+                        <i data-lucide="loader-2" class="w-4 h-4 text-sky-400 animate-spin"></i>
+                        Processando fotos em alta resolução...
+                    </span>
+                    <span id="batchPercentText" class="font-mono font-bold text-sky-400">0%</span>
+                </div>
+                <div class="w-full h-3 rounded-full bg-slate-900 border border-slate-800 overflow-hidden">
+                    <div id="batchProgressBar" class="h-full bg-gradient-to-r from-sky-500 to-indigo-600 transition-all duration-300 w-0"></div>
+                </div>
+            </div>
+
+            <!-- Lista / Grade das Fotos Carregadas -->
+            <div id="batchFilesCard" class="hidden bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="images" class="w-4 h-4 text-sky-400"></i>
+                            Fila de Fotos (<span id="batchFilesCount">0</span>)
+                        </h3>
+                        <p class="text-xs text-slate-400">As fotos verticais receberão VERTICAL.png e as horizontais HORIZONTAL.png</p>
+                    </div>
+                    <button id="btnClearBatch" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 px-3 py-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 transition">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Limpar Fila
+                    </button>
+                </div>
+
+                <div id="batchGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[480px] overflow-y-auto pr-1">
+                    <!-- Cards de fotos inseridos via JS -->
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Modal ou Toast de Sucesso/Erro -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition duration-300 pointer-events-none">
+        <div class="bg-slate-900 border border-slate-700 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3">
+            <div id="toastIcon" class="w-6 h-6 text-emerald-400 flex items-center justify-center"></div>
+            <div>
+                <div id="toastTitle" class="text-xs font-bold">Sucesso!</div>
+                <div id="toastMessage" class="text-xs text-slate-300">Operação concluída.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts do Sistema -->
+    <script src="/static/js/app.js"></script>
+    <script>
+        // Inicializa ícones do Lucide
+        lucide.createIcons();
+    </script>
+</body>
+</html>
