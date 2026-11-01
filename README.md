@@ -59,3 +59,26 @@ sistema_logo/
 │   └── js/app.js         (Lógica do editor e lote)
 └── fotos_processadas/    (Pasta onde as fotos finais são salvas)
 ```
+
+---
+
+## 🔧 Solução de Problemas (Troubleshooting)
+
+### 1. `python: can't open file 'C:\Windows\system32\app.py'`
+- **Causa:** Ocorre quando o arquivo `.bat` é executado com privilégios de Administrador ("Executar como Administrador") ou via atalhos sem diretório de trabalho definido. Nesses casos, o Windows define o diretório ativo como `C:\Windows\system32`, onde o arquivo `app.py` não existe.
+- **Solução aplicada:** O script agora inicia com `cd /d "%~dp0"`, que força o terminal a mudar imediatamente para a pasta onde o script e o `app.py` estão salvos.
+
+### 2. `'SISTEMA' / 'ho' / '9009' não é reconhecido como um comando interno ou externo`
+- **Causa:** O comando `chcp 65001` (UTF-8) dentro de scripts `.bat` no Windows `cmd.exe` causa um bug conhecido de dessincronização de ponteiro de arquivo quando há caracteres acentuados. O interpretador salta bytes e 'come' o início dos comandos (transformando `echo SISTEMA` em `SISTEMA`, `echo.` em `.`, `echo` em `ho`, e gerando código de erro `9009`).
+- **Solução aplicada:** O script foi ajustado para remover `chcp 65001`, usar mensagens em padrão ASCII/ANSI e quebras de linha Windows (`CRLF`).
+
+### 3. `... foi inesperado neste momento.`
+- **Causa:** Uso de parênteses dentro de blocos condicionais `if ( ... )`, fazendo o interpretador fechar o bloco precocemente.
+- **Solução aplicada:** Substituição dos parênteses por colchetes e uso de `if errorlevel 1`.
+
+### 4. Execução Manual (Alternativa via Terminal / PowerShell)
+Caso prefira rodar diretamente no PowerShell ou Prompt de Comando dentro da pasta do projeto:
+```powershell
+python -m pip install flask pillow
+python app.py
+```
